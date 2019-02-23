@@ -1,0 +1,7 @@
+<resources>
+    <string name="app_name">Zshot</string>
+    <string name="Exit_Description">This Button is to exit the app</string>
+    <string name="ShutterButton_Description">Take Photo</string>
+    <string name="Flash_Description">Change flash</string>
+    <string name="Hdr_description">Change HDR state</string>
+</resources>
