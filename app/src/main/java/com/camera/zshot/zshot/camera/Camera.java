@@ -1,4 +1,4 @@
-package com.camera.zshot.zshot;
+package com.camera.zshot.zshot.camera;
 
 import android.content.Context;
 import android.graphics.ImageFormat;
@@ -15,35 +15,35 @@ import android.hardware.camera2.TotalCaptureResult;
 import android.hardware.camera2.params.MeteringRectangle;
 import android.hardware.camera2.params.StreamConfigurationMap;
 import android.hardware.camera2.params.TonemapCurve;
+import android.media.Image;
 import android.media.ImageReader;
 import android.os.Environment;
 import android.os.Handler;
 import android.os.HandlerThread;
 import android.support.annotation.NonNull;
+import android.support.annotation.Nullable;
 import android.util.Size;
 import android.view.Surface;
 import android.widget.Toast;
+
+import com.camera.zshot.zshot.BuildConfig;
+import com.camera.zshot.zshot.CameraLogger;
+import com.camera.zshot.zshot.ImageSaver;
+import com.camera.zshot.zshot.ui.MainActivity;
 
 import java.io.File;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.Comparator;
+import java.util.List;
 
 import static android.content.Context.CAMERA_SERVICE;
 import static android.hardware.camera2.CameraDevice.StateCallback;
 
-/**
- * Created by Sam on 1/29/2018.
- */
-interface OnCameraFocusListener
-{
-    void OnFocus(int focus);
-    void OnCameraOpened(boolean State);
-}
-class Camera {
+public class Camera {
     static Size PreviewSize = null;
-    static final int STATE_FOCUSING = -1;
-    static final int STATE_FOCUSED = 0;
+    public static final int STATE_FOCUSING = -1;
+    public static final int STATE_FOCUSED = 0;
     private static final int STATE_PREVIEWING = 0;
     private static final int STATE_WAIT_FOCUS_LOCK = 1;
     private static final int STATE_WAITING_PRECAPTURE = 2;
@@ -65,8 +65,11 @@ class Camera {
     private ImageReader imageReader = null;
     private ImageReader.OnImageAvailableListener onImageAvailableListener = null;
     private static final File ImageFile = new File(Environment.getExternalStorageDirectory().getAbsolutePath() + "/DCIM/", "Zshot");
-    private CameraLogger Logger = null;
-    Camera(Context context,Surface surface)
+    private CameraLogger Logger;
+    private static Size[] Resolutions = null;
+
+
+    public Camera(Context context,Surface surface)
     {
         this.context = context;
         this.PreviewSurface = surface;
@@ -146,6 +149,8 @@ class Camera {
             }
         };
 
+        ProcessCameraoutputSizes();
+
     }
 
     @Deprecated
@@ -161,7 +166,7 @@ class Camera {
 
     }
 
-    void OpenCamera(String CameraID)
+    public void OpenCamera(String CameraID)
     {
         this.CurrentCamera = CameraID;
         OpenBgThread();
@@ -174,7 +179,7 @@ class Camera {
         }
     }
 
-    void CloseCamera() {
+    public void CloseCamera() {
         if(mcameraCaptureSession != null)
         {
            mcameraCaptureSession.close();
@@ -190,7 +195,7 @@ class Camera {
         CloseBgThread();
     }
 
-    void LockFocus()
+    public void LockFocus()
     {
         FocusState = STATE_WAIT_FOCUS_LOCK;
         PreviewRequestBuilder.set(CaptureRequest.CONTROL_AF_TRIGGER,CaptureRequest.CONTROL_AF_TRIGGER_START);
@@ -203,7 +208,7 @@ class Camera {
         }
     }
 
-    void FocusOnTap(float x ,float y)
+    public void FocusOnTap(float x ,float y)
     {
         FocusState = STATE_WAIT_FOCUS_LOCK;
         PreviewRequestBuilder.set(CaptureRequest.CONTROL_AF_TRIGGER,CaptureRequest.CONTROL_AF_TRIGGER_START);
@@ -238,7 +243,7 @@ class Camera {
             ImageCaptureBuilder = cameraDevice.createCaptureRequest(CameraDevice.TEMPLATE_STILL_CAPTURE);
             PreviewRequestBuilder.addTarget(PreviewSurface);
             ImageCaptureBuilder.addTarget(imageReader.getSurface());
-            ApplyHighQualityFilter();
+            ApplyContrastFilter();
             if(isOISSupported())
                 ImageCaptureBuilder.set(CaptureRequest.LENS_OPTICAL_STABILIZATION_MODE, CaptureRequest.LENS_OPTICAL_STABILIZATION_MODE_ON);
 
@@ -288,7 +293,7 @@ class Camera {
         handler = new Handler(handlerThread.getLooper());
     }
 
-    static void setOnFocusListener(OnCameraFocusListener onCameraFocusListener)
+    public static void setOnFocusListener(OnCameraFocusListener onCameraFocusListener)
     {
         Camera.onCameraFocusListener = onCameraFocusListener;
     }
@@ -337,11 +342,9 @@ class Camera {
     }
 
 
-    void CaptureImageNow()
+    public void CaptureImageNow()
     {
         try {
-            //ImageCaptureBuilder.set(CaptureRequest.CONTROL_AF_MODE,CaptureRequest.CONTROL_AF_MODE_CONTINUOUS_PICTURE);
-            //ImageCaptureBuilder.set(CaptureRequest.CONTROL_AE_MODE,CaptureRequest.CONTROL_AE_MODE_ON_AUTO_FLASH);
             CameraCaptureSession.CaptureCallback captureCallback = new CameraCaptureSession.CaptureCallback() {
                 @Override
                 public void onCaptureCompleted(@NonNull CameraCaptureSession session, @NonNull CaptureRequest request, @NonNull TotalCaptureResult result) {
@@ -376,7 +379,7 @@ class Camera {
         }
     }
 
-    void Set(CaptureRequest.Key key,Integer value){
+    public void Set(CaptureRequest.Key key,Integer value){
         try {
             ImageCaptureBuilder.set(key, value);
             PreviewRequestBuilder.set(key, value);
@@ -425,7 +428,7 @@ class Camera {
             {
                 float array[] = new float[tonemapCurve.getPointCount(channel)*2];
                 for(int i = 0 ; i < array.length ; i++)
-                    array[i] *= 0.03f;
+                    array[i] *= 0.5f;
                 channels[channel] = array;
             }
             TonemapCurve tc = new TonemapCurve(channels[TonemapCurve.CHANNEL_RED],channels[TonemapCurve.CHANNEL_GREEN],channels[TonemapCurve.CHANNEL_BLUE]);
@@ -442,6 +445,27 @@ class Camera {
             return;
         ImageCaptureBuilder.set(CaptureRequest.TONEMAP_MODE,CaptureRequest.TONEMAP_MODE_HIGH_QUALITY);
         PreviewRequestBuilder.set(CaptureRequest.TONEMAP_MODE,CaptureRequest.TONEMAP_MODE_HIGH_QUALITY);
+    }
+
+    private void ProcessCameraoutputSizes()
+    {
+        if(CurrentCamera == null || cameraManager == null)
+            return ;
+       Resolutions = null;
+
+        try {
+            CameraCharacteristics cameraCharacteristics =cameraManager.getCameraCharacteristics(CurrentCamera);
+            StreamConfigurationMap map = cameraCharacteristics.get(CameraCharacteristics.SCALER_STREAM_CONFIGURATION_MAP);
+            assert map!=null;
+            Resolutions = map.getOutputSizes(ImageFormat.JPEG);
+        } catch (CameraAccessException e) {
+            e.printStackTrace();
+        }
+    }
+
+    public static @Nullable Size[] getCameraresolutions()
+    {
+        return Resolutions;
     }
 
 

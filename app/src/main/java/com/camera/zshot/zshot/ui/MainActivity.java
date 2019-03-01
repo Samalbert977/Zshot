@@ -1,8 +1,9 @@
-package com.camera.zshot.zshot;
+package com.camera.zshot.zshot.ui;
 
 import android.Manifest;
 import android.annotation.SuppressLint;
 import android.content.Context;
+import android.content.Intent;
 import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
 import android.hardware.Sensor;
@@ -32,8 +33,16 @@ import android.view.ViewConfiguration;
 import android.widget.FrameLayout;
 import android.widget.ImageButton;
 
+import com.camera.zshot.zshot.BuildConfig;
+import com.camera.zshot.zshot.CameraLogger;
+import com.camera.zshot.zshot.CustomView;
+import com.camera.zshot.zshot.camera.OnCameraFocusListener;
+import com.camera.zshot.zshot.keys.Keys;
+import com.camera.zshot.zshot.R;
+import com.camera.zshot.zshot.camera.Camera;
 
-public class MainActivity extends AppCompatActivity implements SensorEventListener  {
+
+public class MainActivity extends AppCompatActivity implements SensorEventListener ,View.OnClickListener  {
         public static int ORIENTATION = 0;
         public static final int CAMERA_PERMISSION = 1;
         public static final int STORAGE_PERMISSION = 2;
@@ -59,7 +68,6 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         private Sensor Accelerometer = null;
         private SharedPreferences sharedPreferences;
         private SharedPreferences.Editor editor;
-        private final Keys keys = new Keys();
         private static CameraLogger logger;
 
         //UI variable
@@ -195,12 +203,8 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
             Accelerometer = sensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER);
         }
 
-        FlashButton.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                ControlFlash();
-            }
-        });
+        FlashButton.setOnClickListener(this);
+        HDR_Button.setOnClickListener(this);
     }
     private void SetupSurfaceView()
     {
@@ -216,8 +220,10 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
                 if(!CheckSelfPermission(CAMERA_PERMISSION))
                     RequestPermission(CAMERA_PERMISSION);
                 else{
-                    camera = new Camera(MainActivity.this,CameraPreviewSurface);
-                    camera.OpenCamera(OpenedCamera);
+                    if(OpenedCamera != null) {
+                        camera = new Camera(MainActivity.this, CameraPreviewSurface);
+                        camera.OpenCamera(OpenedCamera);
+                    }
                 }
             }
 
@@ -232,6 +238,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
             }
         });
     }
+
     @Deprecated
     private SurfaceView SetupSurfaceView(int width,int height)
     {
@@ -248,8 +255,10 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
                 if(CheckSelfPermission(CAMERA_PERMISSION))
                     RequestPermission(CAMERA_PERMISSION);
                 else{
-                    camera = new Camera(MainActivity.this,CameraPreviewSurface);
-                    camera.OpenCamera(OpenedCamera);
+                    if(OpenedCamera != null) {
+                        camera = new Camera(MainActivity.this, CameraPreviewSurface);
+                        camera.OpenCamera(OpenedCamera);
+                    }
                 }
 
             }
@@ -270,6 +279,8 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
 
     private void DetectCameras() {
         CameraManager cameraManager = (CameraManager)getSystemService(CAMERA_SERVICE);
+        if(cameraManager == null)
+            return;
         try {
             for(String  CameraID : cameraManager.getCameraIdList())
             {
@@ -435,32 +446,32 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
 
     public void ControlFlash() {
 
-           switch (sharedPreferences.getInt(keys.FLASH_KEY,FLASH_AUTO))
+           switch (sharedPreferences.getInt(Keys.FLASH_KEY,FLASH_AUTO))
            {
                case FLASH_AUTO:
                    FlashButton.setImageResource(R.drawable.ic_flash_on_black_24dp);
                    camera.Set(CaptureRequest.CONTROL_AE_MODE, CameraMetadata.CONTROL_AE_MODE_ON_ALWAYS_FLASH);
                    camera.Set(CaptureRequest.FLASH_MODE,CaptureRequest.FLASH_MODE_SINGLE);
-                   editor.putInt(keys.FLASH_KEY,FLASH_ON);
+                   editor.putInt(Keys.FLASH_KEY,FLASH_ON);
                    break;
                case FLASH_ON:
                    FlashButton.setImageResource(R.drawable.ic_flash_off_black_24dp);
                    camera.Set(CaptureRequest.CONTROL_AE_MODE,CameraMetadata.CONTROL_AE_MODE_ON);
                    camera.Set(CaptureRequest.FLASH_MODE,CaptureRequest.FLASH_MODE_OFF);
-                   editor.putInt(keys.FLASH_KEY,FLASH_OFF);
+                   editor.putInt(Keys.FLASH_KEY,FLASH_OFF);
                    break;
                case FLASH_OFF:
                    FlashButton.setImageResource(R.drawable.ic_flash_auto_black_24dp);
                    camera.Set(CaptureRequest.CONTROL_AE_MODE,CameraMetadata.CONTROL_AE_MODE_ON_AUTO_FLASH);
                    //camera.Set(CaptureRequest.FLASH_MODE,CaptureRequest.FLASH_MODE_);
-                   editor.putInt(keys.FLASH_KEY,FLASH_AUTO);
+                   editor.putInt(Keys.FLASH_KEY,FLASH_AUTO);
                    break;
            }
         editor.apply();
     }
 
     private void LoadPreferences(){
-        switch (sharedPreferences.getInt(keys.FLASH_KEY,FLASH_AUTO))
+        switch (sharedPreferences.getInt(Keys.FLASH_KEY,FLASH_AUTO))
         {
             case FLASH_AUTO:
                 FlashButton.setImageResource(R.drawable.ic_flash_auto_black_24dp);
@@ -475,7 +486,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
                 camera.Set(CaptureRequest.CONTROL_AE_MODE,CaptureRequest.CONTROL_AE_MODE_ON_ALWAYS_FLASH);
                 break;
         }
-        switch (sharedPreferences.getInt(keys.HDR_KEY,HDR_OFF))
+        switch (sharedPreferences.getInt(Keys.HDR_KEY,HDR_OFF))
         {
             case HDR_OFF:
                 camera.Set(CaptureRequest.CONTROL_SCENE_MODE, CaptureResult.CONTROL_SCENE_MODE_DISABLED);
@@ -489,26 +500,43 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
     }
 
     public void ControlHDR(View view)  {
-        switch (sharedPreferences.getInt(keys.HDR_KEY,HDR_OFF))
+        switch (sharedPreferences.getInt(Keys.HDR_KEY,HDR_OFF))
         {
             case HDR_OFF:
                 camera.Set(CaptureRequest.CONTROL_SCENE_MODE,CaptureRequest.CONTROL_SCENE_MODE_HDR);
                 HDR_Button.setImageResource(R.drawable.ic_hdr_on_black_24dp);
-                editor.putInt(keys.HDR_KEY,HDR_ON);
+                editor.putInt(Keys.HDR_KEY,HDR_ON);
                 break;
             case HDR_ON:
                 camera.Set(CaptureRequest.CONTROL_SCENE_MODE, CaptureResult.CONTROL_SCENE_MODE_DISABLED);
                 HDR_Button.setImageResource(R.drawable.ic_hdr_off_black_24dp);
-                editor.putInt(keys.HDR_KEY,HDR_OFF);
+                editor.putInt(Keys.HDR_KEY,HDR_OFF);
                 break;
         }
         editor.apply();
     }
 
-    static CameraLogger getLoggerInstance()
+    public static CameraLogger getLoggerInstance()
     {
         return logger;
     }
 
 
+    @Override
+    public void onClick(View view) {
+
+            switch (view.getId())
+            {
+                case R.id.FlashButton:
+                    ControlFlash();
+                    break;
+                case R.id.HDR_Button:
+                    ControlHDR(null);
+                    break;
+                case R.id.Settings:
+                    startActivity(new Intent(this,AppSettings.class));
+                    break;
+            }
+
+    }
 }

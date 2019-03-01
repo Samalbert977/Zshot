@@ -26,7 +26,7 @@ public class CustomView extends SurfaceView {
         paint.setStyle(Paint.Style.STROKE);
     }
 
-    void DrawView(float x , float y , boolean FOCUS , boolean IsFrontCamera)
+    public void DrawView(float x , float y , boolean FOCUS , boolean IsFrontCamera)
     {
         paint.setStrokeWidth(2);
         this.invalidate();

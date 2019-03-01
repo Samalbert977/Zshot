@@ -7,13 +7,13 @@ import java.io.File;
 import java.io.FileWriter;
 import java.util.Calendar;
 
-class CameraLogger {
+public class CameraLogger {
 
     private BufferedWriter bufferedWriter = null;
     private Calendar calendar = null;
     private File file;
 
-    CameraLogger()
+    public CameraLogger()
     {
         String path = Environment.getExternalStorageDirectory().getPath();
         String logFileName = "Camera.log";
@@ -29,7 +29,7 @@ class CameraLogger {
         calendar = Calendar.getInstance();
     }
 
-    void Log(String message)
+    public void Log(String message)
     {
         try
         {
@@ -46,7 +46,7 @@ class CameraLogger {
         }
     }
 
-    void Close()
+    public void Close()
     {
         try
         {
@@ -62,7 +62,7 @@ class CameraLogger {
         }
     }
 
-    void Open()
+    public void Open()
     {
         try
         {

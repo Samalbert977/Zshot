@@ -3,6 +3,9 @@ package com.camera.zshot.zshot;
 import android.annotation.SuppressLint;
 import android.media.Image;
 import android.support.media.ExifInterface;
+
+import com.camera.zshot.zshot.ui.MainActivity;
+
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
@@ -19,7 +22,7 @@ public class ImageSaver implements Runnable {
     private final Image mImage;
     private final File mFile;
 
-    ImageSaver(Image image, File file) {
+    public ImageSaver(Image image, File file) {
         mImage = image;
         mFile = file;
     }

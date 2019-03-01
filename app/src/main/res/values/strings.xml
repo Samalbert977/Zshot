@@ -4,4 +4,9 @@
     <string name="ShutterButton_Description">Take Photo</string>
     <string name="Flash_Description">Change flash</string>
     <string name="Hdr_description">Change HDR state</string>
+    <string name="SettingIconDescription">Setting icon</string>
+    <string name="titleCameraSettings">Camera Settings</string>
+    <string name="titleCameraSettingsSummary">change camera related settings</string>
+    <string name="ResolutionTitle">Resolution</string>
+    <string name="ResolutionSummary">Change image resolution</string>
 </resources>

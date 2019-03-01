@@ -5,7 +5,7 @@
     android:id="@+id/RootLayout"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    tools:context="com.camera.zshot.zshot.MainActivity"
+    tools:context="com.camera.zshot.zshot.ui.MainActivity"
     android:background="@android:drawable/screen_background_dark"
     android:visibility="visible">
 
@@ -77,8 +77,19 @@
             android:layout_below="@+id/FlashButton"
             android:background="@android:color/transparent"
             android:layout_marginTop="20sp"
-            android:onClick="ControlHDR"
             android:contentDescription="@string/Hdr_description"/>
+
+        <ImageButton
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:id="@+id/Settings"
+            android:src="@drawable/ic_settings_white_24dp"
+            android:background="@android:color/transparent"
+            android:layout_alignParentBottom="true"
+            android:layout_centerInParent="true"
+            android:layout_marginBottom="15sp"
+            android:contentDescription="@string/SettingIconDescription"/>
+
     </RelativeLayout>
 
 </RelativeLayout>
