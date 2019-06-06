@@ -2,7 +2,7 @@ package com.camera.zshot.zshot;
 
 import android.annotation.SuppressLint;
 import android.media.Image;
-import android.support.media.ExifInterface;
+import androidx.exifinterface.media.ExifInterface;
 
 import com.camera.zshot.zshot.ui.MainActivity;
 

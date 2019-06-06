@@ -29,15 +29,14 @@ public class CameraLogger {
         calendar = Calendar.getInstance();
     }
 
-    public void Log(String message)
+    public void Log(String Tag , String message)
     {
         try
         {
-            String log = "Time:"+calendar.get(Calendar.HOUR)+calendar.get(Calendar.MINUTE)+" Message:"+message;
+            String log = "Time:"+calendar.get(Calendar.HOUR)+":"+calendar.get(Calendar.MINUTE)+"Tag : "+Tag+" Message:"+message;
             bufferedWriter.write(log);
             bufferedWriter.newLine();
             bufferedWriter.flush();
-            bufferedWriter.close();
 
         }
         catch(Exception e)

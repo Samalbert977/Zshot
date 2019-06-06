@@ -1,16 +1,22 @@
 package com.camera.zshot.zshot.ui;
 
-import android.preference.ListPreference;
-import android.preference.PreferenceFragment;
-import android.preference.PreferenceScreen;
-import android.support.annotation.Nullable;
-import android.support.v7.app.AppCompatActivity;
+import android.content.Context;
 import android.os.Bundle;
+
+import androidx.preference.EditTextPreference;
+import androidx.preference.ListPreference;
 import android.util.Size;
 
 import com.camera.zshot.zshot.R;
 import com.camera.zshot.zshot.camera.Camera;
 import com.camera.zshot.zshot.keys.Keys;
+
+import java.util.ArrayList;
+import java.util.List;
+
+import androidx.appcompat.app.AppCompatActivity;
+import androidx.preference.PreferenceFragmentCompat;
+import androidx.preference.PreferenceScreen;
 
 public class CameraSetting extends AppCompatActivity {
 
@@ -19,21 +25,21 @@ public class CameraSetting extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_setting);
 
-        getFragmentManager().beginTransaction().replace(R.id.SettingsMainRootView,new CameraSettingMain()).commit();
+       getSupportFragmentManager().beginTransaction().replace(R.id.SettingsMainRootView,new CameraSettingMain()).commit();
     }
 
-    public static class CameraSettingMain extends PreferenceFragment
+    public static class CameraSettingMain extends PreferenceFragmentCompat
     {
         PreferenceScreen preferenceScreen;
         private String[] ResEntries = null;
         private String[] ResEntriesValues = null;
 
         @Override
-        public void onCreate(@Nullable Bundle savedInstanceState) {
-            super.onCreate(savedInstanceState);
-            preferenceScreen = this.getPreferenceScreen();
+        public void onCreatePreferences(Bundle savedInstanceState, String rootKey) {
+            Context context = getPreferenceManager().getContext();
+            preferenceScreen = getPreferenceManager().createPreferenceScreen(context);
 
-            ListPreference ResolutionList = new ListPreference(getActivity());
+            ListPreference ResolutionList = new ListPreference(context);
             ResolutionList.setTitle(R.string.ResolutionTitle);
             ResolutionList.setSummary(R.string.ResolutionSummary);
             ResolutionList.setKey(Keys.ImageResolutionKey);
@@ -42,6 +48,17 @@ public class CameraSetting extends AppCompatActivity {
             ResolutionList.setEntryValues(ResEntriesValues);
 
             preferenceScreen.addPreference(ResolutionList);
+
+            EditTextPreference ContrastPref = new EditTextPreference(context);
+            ContrastPref.setTitle(R.string.ContrastPrefTitle);
+            ContrastPref.setSummary(R.string.ContrastPrefSummary);
+            ContrastPref.setDefaultValue("0.5");
+            ContrastPref.setKey(Keys.contrastLevelKey);
+            ContrastPref.setDialogMessage("0~10");
+
+            preferenceScreen.addPreference(ContrastPref);
+
+            setPreferenceScreen(preferenceScreen);
         }
 
         private void ProcessCameraOutputSizes()
@@ -50,16 +67,26 @@ public class CameraSetting extends AppCompatActivity {
 
          if(outputsizes == null)
              return ;
-
-         ResEntries = new String[outputsizes.length];
-         ResEntriesValues = new String[outputsizes.length];
-
+         List<Integer> buffer = new ArrayList<>();
+         List<String> buffer1 = new ArrayList<>();
          for(int i = 0; i<outputsizes.length;i++) {
 
              int value = outputsizes[i].getWidth()*outputsizes[i].getHeight()/1000000;
-             ResEntries[i] = String.valueOf(value).concat(" MP");
-             ResEntriesValues[i] = String.valueOf(outputsizes[i].getWidth()).concat("*").concat(String.valueOf(outputsizes[i].getHeight()));
+             if(value > 1) {
+                 buffer.add(value);
+                 buffer1.add(String.valueOf(outputsizes[i].getWidth()).concat("_").concat(String.valueOf(outputsizes[i].getHeight())));
+             }
          }
+
+         ResEntries = new String[buffer.size()];
+         ResEntriesValues = new String[buffer1.size()];
+
+         for(int i=0;i<buffer.size();i++)
+         {
+             ResEntries[i] = String.valueOf(buffer.get(i)).concat(" MP");
+             ResEntriesValues[i] = buffer1.get(i);
+         }
+
         }
 
     }

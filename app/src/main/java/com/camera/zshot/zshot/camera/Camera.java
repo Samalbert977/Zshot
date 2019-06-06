@@ -15,13 +15,14 @@ import android.hardware.camera2.TotalCaptureResult;
 import android.hardware.camera2.params.MeteringRectangle;
 import android.hardware.camera2.params.StreamConfigurationMap;
 import android.hardware.camera2.params.TonemapCurve;
-import android.media.Image;
 import android.media.ImageReader;
 import android.os.Environment;
 import android.os.Handler;
 import android.os.HandlerThread;
-import android.support.annotation.NonNull;
-import android.support.annotation.Nullable;
+import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
+
+import android.preference.PreferenceManager;
 import android.util.Size;
 import android.view.Surface;
 import android.widget.Toast;
@@ -29,13 +30,13 @@ import android.widget.Toast;
 import com.camera.zshot.zshot.BuildConfig;
 import com.camera.zshot.zshot.CameraLogger;
 import com.camera.zshot.zshot.ImageSaver;
+import com.camera.zshot.zshot.keys.Keys;
 import com.camera.zshot.zshot.ui.MainActivity;
 
 import java.io.File;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.Comparator;
-import java.util.List;
 
 import static android.content.Context.CAMERA_SERVICE;
 import static android.hardware.camera2.CameraDevice.StateCallback;
@@ -67,6 +68,8 @@ public class Camera {
     private static final File ImageFile = new File(Environment.getExternalStorageDirectory().getAbsolutePath() + "/DCIM/", "Zshot");
     private CameraLogger Logger;
     private static Size[] Resolutions = null;
+    private Size CurrentResolution;
+    private final String TAG = "Camera.java";
 
 
     public Camera(Context context,Surface surface)
@@ -82,7 +85,7 @@ public class Camera {
             @Override
             public void onOpened(@NonNull CameraDevice camera) {
                 if(BuildConfig.DEBUG)
-                Logger.Log("Camera Opened");
+                Logger.Log(TAG,"Camera Opened");
                 cameraDevice = camera;
                 CreateCameraPreviewSession();
                 onCameraFocusListener.OnCameraOpened(true);
@@ -91,7 +94,7 @@ public class Camera {
             @Override
             public void onDisconnected(@NonNull CameraDevice camera) {
                 if(BuildConfig.DEBUG)
-                    Logger.Log("Camera Disconnected");
+                    Logger.Log(TAG,"Camera Disconnected");
                 camera.close();
                 cameraDevice =null;
             }
@@ -99,7 +102,7 @@ public class Camera {
             @Override
             public void onError(@NonNull CameraDevice camera, int error) {
                 if(BuildConfig.DEBUG)
-                    Logger.Log("Error on opening camera");
+                    Logger.Log(TAG,"Error on opening camera");
                     camera.close();
                     cameraDevice =null;
             }
@@ -149,8 +152,6 @@ public class Camera {
             }
         };
 
-        ProcessCameraoutputSizes();
-
     }
 
     @Deprecated
@@ -168,18 +169,38 @@ public class Camera {
 
     public void OpenCamera(String CameraID)
     {
+        if(BuildConfig.DEBUG)
+            Logger.Log(TAG,"Opening Camera");
         this.CurrentCamera = CameraID;
         OpenBgThread();
         cameraManager = (CameraManager) context.getSystemService(CAMERA_SERVICE);
         try {
             assert cameraManager != null;
+            String res = PreferenceManager.getDefaultSharedPreferences(context).getString(Keys.ImageResolutionKey,null);
+            if(res!=null) {
+                String[] buff = res.split("_");
+                if (buff.length != 0) {
+                    CurrentResolution = new Size(Integer.parseInt(buff[0]), Integer.parseInt(buff[1]));
+                }
+            }
+            else {
+                CurrentResolution = GetMaxCameraResolution();
+            }
+            if (BuildConfig.DEBUG) {
+                Logger.Log(TAG,"Resolution is : " + CurrentResolution.getWidth()+" x "+CurrentResolution.getHeight());
+            }
             cameraManager.openCamera(CameraID,stateCallback,handler);
+            ProcessCameraoutputSizes();
         } catch (CameraAccessException | SecurityException e) {
             e.printStackTrace();
         }
+        if(BuildConfig.DEBUG)
+            Logger.Log(TAG,"Camera Opened");
     }
 
     public void CloseCamera() {
+        if(BuildConfig.DEBUG)
+            Logger.Log(TAG,"Closing Camera");
         if(mcameraCaptureSession != null)
         {
            mcameraCaptureSession.close();
@@ -193,6 +214,8 @@ public class Camera {
         if(imageReader!=null)
             imageReader.close();
         CloseBgThread();
+        if(BuildConfig.DEBUG)
+            Logger.Log(TAG,"Camera Closed");
     }
 
     public void LockFocus()
@@ -237,7 +260,7 @@ public class Camera {
     private void CreateCameraPreviewSession() {
 
         try {
-            imageReader = ImageReader.newInstance(GetMaxCameraResolution().getWidth(),GetMaxCameraResolution().getHeight(),ImageFormat.JPEG,2);
+            imageReader = ImageReader.newInstance(CurrentResolution.getWidth(),CurrentResolution.getHeight(),ImageFormat.JPEG,2);
             imageReader.setOnImageAvailableListener(onImageAvailableListener,null);
             PreviewRequestBuilder = cameraDevice.createCaptureRequest(CameraDevice.TEMPLATE_PREVIEW);
             ImageCaptureBuilder = cameraDevice.createCaptureRequest(CameraDevice.TEMPLATE_STILL_CAPTURE);
@@ -351,7 +374,7 @@ public class Camera {
                     super.onCaptureCompleted(session, request, result);
                     Toast.makeText(context,"ImageSaved",Toast.LENGTH_LONG).show();
                     if(BuildConfig.DEBUG)
-                        Logger.Log("Image saved");
+                        Logger.Log(TAG,"Image saved");
                     ResumePreview();
                 }
 
@@ -360,7 +383,7 @@ public class Camera {
                     super.onCaptureFailed(session, request, failure);
                     Toast.makeText(context,"Failed",Toast.LENGTH_LONG).show();
                     if(BuildConfig.DEBUG)
-                        Logger.Log("Image saved");
+                        Logger.Log(TAG,"Image saved");
                 }
             };
             mcameraCaptureSession.stopRepeating();
@@ -392,7 +415,7 @@ public class Camera {
     {
         Rect rect = new Rect(1,1,500,500);
         if(BuildConfig.DEBUG)
-            Logger.Log(rect.toString());
+            Logger.Log(TAG,rect.toString());
         return new MeteringRectangle[]{new MeteringRectangle(rect,MeteringRectangle.METERING_WEIGHT_MAX)};
     }
 
@@ -420,6 +443,17 @@ public class Camera {
     {
         if(ImageCaptureBuilder == null || PreviewRequestBuilder == null)
             return;
+        String temp = PreferenceManager.getDefaultSharedPreferences(context).getString(Keys.contrastLevelKey,"1");
+        float offset = 0.0f;
+        try {
+            offset = Float.parseFloat(temp == null ? "1" : temp) / 2;
+            offset = offset < 20 ? offset : 5;
+        }
+        catch(NumberFormatException e){
+            if(BuildConfig.DEBUG)
+                Logger.Log(TAG,e.getMessage());
+        }
+
         TonemapCurve tonemapCurve = ImageCaptureBuilder.get(CaptureRequest.TONEMAP_CURVE);
         if(tonemapCurve!=null)
         {
@@ -428,7 +462,7 @@ public class Camera {
             {
                 float array[] = new float[tonemapCurve.getPointCount(channel)*2];
                 for(int i = 0 ; i < array.length ; i++)
-                    array[i] *= 0.5f;
+                    array[i] *= offset;
                 channels[channel] = array;
             }
             TonemapCurve tc = new TonemapCurve(channels[TonemapCurve.CHANNEL_RED],channels[TonemapCurve.CHANNEL_GREEN],channels[TonemapCurve.CHANNEL_BLUE]);
@@ -449,8 +483,18 @@ public class Camera {
 
     private void ProcessCameraoutputSizes()
     {
-        if(CurrentCamera == null || cameraManager == null)
-            return ;
+        if(BuildConfig.DEBUG)
+        {
+            Logger.Log(TAG,"ProcessCameraOutputSizes called");
+        }
+
+        if(CurrentCamera == null || cameraManager == null) {
+            if(BuildConfig.DEBUG)
+            {
+                Logger.Log(TAG,"Camera Device is null , returning");
+            }
+            return;
+        }
        Resolutions = null;
 
         try {
@@ -458,7 +502,10 @@ public class Camera {
             StreamConfigurationMap map = cameraCharacteristics.get(CameraCharacteristics.SCALER_STREAM_CONFIGURATION_MAP);
             assert map!=null;
             Resolutions = map.getOutputSizes(ImageFormat.JPEG);
-        } catch (CameraAccessException e) {
+            if(BuildConfig.DEBUG) {
+                Logger.Log(TAG,Arrays.toString(Resolutions));
+            }
+            } catch (CameraAccessException e) {
             e.printStackTrace();
         }
     }

@@ -9,4 +9,6 @@
     <string name="titleCameraSettingsSummary">change camera related settings</string>
     <string name="ResolutionTitle">Resolution</string>
     <string name="ResolutionSummary">Change image resolution</string>
+    <string name="ContrastPrefTitle">Contrast value</string>
+    <string name="ContrastPrefSummary">Set value of contrast in images.</string>
 </resources>

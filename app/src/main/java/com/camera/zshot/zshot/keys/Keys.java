@@ -9,4 +9,5 @@ public final class Keys {
     public static final String HDR_KEY = "HDR";
     public static final String CameraSettingPreferenceKey = "toOpenCameraSettings";
     public static final String ImageResolutionKey = "WhatIsTheImageResolution";
+    public static final String contrastLevelKey = "contrastValue";
 }

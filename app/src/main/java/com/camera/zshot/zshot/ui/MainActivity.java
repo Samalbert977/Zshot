@@ -20,10 +20,6 @@ import android.os.Bundle;
 import android.os.Handler;
 import android.os.Message;
 import android.preference.PreferenceManager;
-import android.support.annotation.NonNull;
-import android.support.v4.app.ActivityCompat;
-import android.support.v4.content.ContextCompat;
-import android.support.v7.app.AppCompatActivity;
 import android.view.MotionEvent;
 import android.view.Surface;
 import android.view.SurfaceHolder;
@@ -36,10 +32,15 @@ import android.widget.ImageButton;
 import com.camera.zshot.zshot.BuildConfig;
 import com.camera.zshot.zshot.CameraLogger;
 import com.camera.zshot.zshot.CustomView;
-import com.camera.zshot.zshot.camera.OnCameraFocusListener;
-import com.camera.zshot.zshot.keys.Keys;
 import com.camera.zshot.zshot.R;
 import com.camera.zshot.zshot.camera.Camera;
+import com.camera.zshot.zshot.camera.OnCameraFocusListener;
+import com.camera.zshot.zshot.keys.Keys;
+
+import androidx.annotation.NonNull;
+import androidx.appcompat.app.AppCompatActivity;
+import androidx.core.app.ActivityCompat;
+import androidx.core.content.ContextCompat;
 
 
 public class MainActivity extends AppCompatActivity implements SensorEventListener ,View.OnClickListener  {
@@ -69,9 +70,10 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         private SharedPreferences sharedPreferences;
         private SharedPreferences.Editor editor;
         private static CameraLogger logger;
+        private final String TAG = "MainActivity";
 
         //UI variable
-        ImageButton ShutterButton , FlashButton , HDR_Button;
+        ImageButton ShutterButton , FlashButton , HDR_Button , SettingButton;
 
 
         @Override
@@ -127,7 +129,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
             @Override
             public boolean handleMessage(Message msg) {
                 if(BuildConfig.DEBUG)
-                    logger.Log(msg.toString());
+                    logger.Log(TAG,msg.toString());
                 if(Integer.parseInt(msg.obj.toString()) == Camera.STATE_FOCUSING)
                     customView.DrawView(X,Y,false,false);
                 else if(Integer.parseInt(msg.obj.toString()) == Camera.STATE_FOCUSED)
@@ -175,7 +177,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
                             Y = event.getY();
                             camera.FocusOnTap(X,Y);
                             if(BuildConfig.DEBUG)
-                                logger.Log("X = "+X+"Y = "+Y);
+                                logger.Log(TAG,"X = "+X+"Y = "+Y);
                             return false;
                         }
                     });
@@ -203,8 +205,11 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
             Accelerometer = sensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER);
         }
 
+        SettingButton = findViewById(R.id.Settings);
+
         FlashButton.setOnClickListener(this);
         HDR_Button.setOnClickListener(this);
+        SettingButton.setOnClickListener(this);
     }
     private void SetupSurfaceView()
     {
@@ -392,7 +397,8 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
             RequestPermission(STORAGE_PERMISSION);
         else{
             ORIENTATION = rotation;
-            camera.CaptureImageNow();}
+            camera.CaptureImageNow();
+        }
     }
 
 
