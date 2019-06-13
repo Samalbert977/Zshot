@@ -29,6 +29,47 @@
     </FrameLayout>
 
     <RelativeLayout
+        android:id="@+id/CurveLayout"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_alignStart="@+id/DrawingSurface"
+        android:visibility="gone">
+
+        <SeekBar
+            android:id="@+id/RedCurveBar"
+            android:layout_width="200dp"
+            android:layout_height="wrap_content"
+            android:max="10"
+            android:rotation="0"
+            android:layout_margin="5dp"
+            android:progressTint="@color/Red"
+            android:thumbTint="@color/Red"/>
+
+        <SeekBar
+            android:id="@+id/GreenCurveBar"
+            android:layout_width="200dp"
+            android:layout_height="wrap_content"
+            android:max="10"
+            android:rotation="0"
+            android:layout_below="@+id/RedCurveBar"
+            android:layout_margin="5dp"
+            android:progressTint="@color/Green"
+            android:thumbTint="@color/Green" />
+
+        <SeekBar
+            android:id="@+id/BlueCurveBar"
+            android:layout_width="200dp"
+            android:layout_height="wrap_content"
+            android:max="10"
+            android:rotation="0"
+            android:layout_below="@+id/GreenCurveBar"
+            android:layout_margin="5dp"
+            android:progressTint="@color/Blue"
+            android:thumbTint="@color/Blue"/>
+
+    </RelativeLayout>
+
+    <RelativeLayout
         android:id="@+id/Panel1"
         android:layout_width="wrap_content"
         android:layout_height="match_parent"
@@ -89,6 +130,15 @@
             android:layout_centerInParent="true"
             android:layout_marginBottom="15sp"
             android:contentDescription="@string/SettingIconDescription"/>
+
+        <Button
+            android:id="@+id/curveButton"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/curveTitle"
+            android:layout_below="@+id/HDR_Button"
+            android:background="@android:color/transparent"
+            android:layout_marginTop="10dp"/>
 
     </RelativeLayout>
 

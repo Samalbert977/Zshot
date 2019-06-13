@@ -11,4 +11,5 @@
     <string name="ResolutionSummary">Change image resolution</string>
     <string name="ContrastPrefTitle">Contrast value</string>
     <string name="ContrastPrefSummary">Set value of contrast in images.</string>
+    <string name="curveTitle">Curves</string>
 </resources>

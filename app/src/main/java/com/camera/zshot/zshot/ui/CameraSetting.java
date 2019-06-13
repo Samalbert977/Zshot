@@ -63,20 +63,20 @@ public class CameraSetting extends AppCompatActivity {
 
         private void ProcessCameraOutputSizes()
         {
-         Size[] outputsizes =  Camera.getCameraresolutions();
+         Size[] outputsizes =  Camera.getCameraResolutions();
 
          if(outputsizes == null)
              return ;
          List<Integer> buffer = new ArrayList<>();
          List<String> buffer1 = new ArrayList<>();
-         for(int i = 0; i<outputsizes.length;i++) {
+            for (Size outputsize : outputsizes) {
 
-             int value = outputsizes[i].getWidth()*outputsizes[i].getHeight()/1000000;
-             if(value > 1) {
-                 buffer.add(value);
-                 buffer1.add(String.valueOf(outputsizes[i].getWidth()).concat("_").concat(String.valueOf(outputsizes[i].getHeight())));
-             }
-         }
+                int value = outputsize.getWidth() * outputsize.getHeight() / 1000000;
+                if (value > 1) {
+                    buffer.add(value);
+                    buffer1.add(String.valueOf(outputsize.getWidth()).concat("_").concat(String.valueOf(outputsize.getHeight())));
+                }
+            }
 
          ResEntries = new String[buffer.size()];
          ResEntriesValues = new String[buffer1.size()];

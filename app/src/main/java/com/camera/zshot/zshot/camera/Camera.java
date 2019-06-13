@@ -19,9 +19,6 @@ import android.media.ImageReader;
 import android.os.Environment;
 import android.os.Handler;
 import android.os.HandlerThread;
-import androidx.annotation.NonNull;
-import androidx.annotation.Nullable;
-
 import android.preference.PreferenceManager;
 import android.util.Size;
 import android.view.Surface;
@@ -38,11 +35,14 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.Comparator;
 
+import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
+
 import static android.content.Context.CAMERA_SERVICE;
 import static android.hardware.camera2.CameraDevice.StateCallback;
 
 public class Camera {
-    static Size PreviewSize = null;
+    private static Size PreviewSize = null;
     public static final int STATE_FOCUSING = -1;
     public static final int STATE_FOCUSED = 0;
     private static final int STATE_PREVIEWING = 0;
@@ -190,7 +190,7 @@ public class Camera {
                 Logger.Log(TAG,"Resolution is : " + CurrentResolution.getWidth()+" x "+CurrentResolution.getHeight());
             }
             cameraManager.openCamera(CameraID,stateCallback,handler);
-            ProcessCameraoutputSizes();
+            ProcessCameraOutputSizes();
         } catch (CameraAccessException | SecurityException e) {
             e.printStackTrace();
         }
@@ -218,6 +218,7 @@ public class Camera {
             Logger.Log(TAG,"Camera Closed");
     }
 
+    @Deprecated
     public void LockFocus()
     {
         FocusState = STATE_WAIT_FOCUS_LOCK;
@@ -231,11 +232,11 @@ public class Camera {
         }
     }
 
-    public void FocusOnTap(float x ,float y)
+    public void FocusOnTap(float x ,float y,int width,int height)
     {
         FocusState = STATE_WAIT_FOCUS_LOCK;
         PreviewRequestBuilder.set(CaptureRequest.CONTROL_AF_TRIGGER,CaptureRequest.CONTROL_AF_TRIGGER_START);
-        PreviewRequestBuilder.set(CaptureRequest.CONTROL_AE_REGIONS,CalculateFocusRects(x,y));
+        PreviewRequestBuilder.set(CaptureRequest.CONTROL_AE_REGIONS, CalculateFocusRect(x,y,width,height));
         try {
             mcameraCaptureSession.capture(PreviewRequestBuilder.build(),captureCallback,handler);
             onCameraFocusListener.OnFocus(STATE_FOCUSING);
@@ -266,7 +267,6 @@ public class Camera {
             ImageCaptureBuilder = cameraDevice.createCaptureRequest(CameraDevice.TEMPLATE_STILL_CAPTURE);
             PreviewRequestBuilder.addTarget(PreviewSurface);
             ImageCaptureBuilder.addTarget(imageReader.getSurface());
-            ApplyContrastFilter();
             if(isOISSupported())
                 ImageCaptureBuilder.set(CaptureRequest.LENS_OPTICAL_STABILIZATION_MODE, CaptureRequest.LENS_OPTICAL_STABILIZATION_MODE_ON);
 
@@ -274,6 +274,7 @@ public class Camera {
                 @Override
                 public void onConfigured(@NonNull CameraCaptureSession cameraCaptureSession) {
                     PreviewRequestBuilder.set(CaptureRequest.CONTROL_AF_MODE,CaptureRequest.CONTROL_AF_MODE_CONTINUOUS_PICTURE);
+                    PreviewRequestBuilder.set(CaptureRequest.TONEMAP_MODE,CaptureRequest.TONEMAP_MODE_CONTRAST_CURVE);
                     mCaptureRequest = PreviewRequestBuilder.build();
                     mcameraCaptureSession = cameraCaptureSession;
                     try {
@@ -337,6 +338,7 @@ public class Camera {
         return Max;
     }
 
+
     private Size GetMiniCameraResolution()
     {
         Size Min = null;
@@ -383,7 +385,7 @@ public class Camera {
                     super.onCaptureFailed(session, request, failure);
                     Toast.makeText(context,"Failed",Toast.LENGTH_LONG).show();
                     if(BuildConfig.DEBUG)
-                        Logger.Log(TAG,"Image saved");
+                        Logger.Log(TAG,"Image save failed");
                 }
             };
             mcameraCaptureSession.stopRepeating();
@@ -406,17 +408,37 @@ public class Camera {
         try {
             ImageCaptureBuilder.set(key, value);
             PreviewRequestBuilder.set(key, value);
+            ImageCaptureBuilder.build();
             mcameraCaptureSession.setRepeatingRequest(PreviewRequestBuilder.build(), captureCallback, handler);
         }
         catch (CameraAccessException e){e.printStackTrace();}
     }
 
-    private MeteringRectangle[] CalculateFocusRects(float x , float y)
+    private @Nullable MeteringRectangle[] CalculateFocusRect(float x , float y, int width, int height)
     {
-        Rect rect = new Rect(1,1,500,500);
-        if(BuildConfig.DEBUG)
-            Logger.Log(TAG,rect.toString());
-        return new MeteringRectangle[]{new MeteringRectangle(rect,MeteringRectangle.METERING_WEIGHT_MAX)};
+        MeteringRectangle[] meteringRectangles = null;
+        try {
+            CameraCharacteristics cameraCharacteristics = cameraManager.getCameraCharacteristics(CurrentCamera);
+            final Rect sensorArraySize = cameraCharacteristics.get(CameraCharacteristics.SENSOR_INFO_ACTIVE_ARRAY_SIZE);
+            y = (int)((x / (float)width)  * (float)sensorArraySize.height());
+            x = (int)((y / (float)height) * (float)sensorArraySize.width());
+
+            x = x > sensorArraySize.width()-1 ? sensorArraySize.width()-1 : x;
+            y = y > sensorArraySize.height()-1 ? sensorArraySize.height()-1 : y;
+
+            MeteringRectangle meteringRectangle = new MeteringRectangle(0 ,0, (int)x, (int)y, MeteringRectangle.METERING_WEIGHT_MAX);
+            meteringRectangles = new MeteringRectangle[]{meteringRectangle};
+            if (BuildConfig.DEBUG) {
+                Logger.Log(TAG,"x = "+x+" y = "+y);
+            }
+            return new MeteringRectangle[]{meteringRectangle};
+        }
+        catch(Exception e)
+        {
+            if(BuildConfig.DEBUG)
+                Logger.Log(TAG,e.getMessage());
+        }
+        return meteringRectangles;
     }
 
     Object get(CaptureRequest.Key key)
@@ -435,53 +457,92 @@ public class Camera {
             {
                 e.printStackTrace();
             }
-
+        if(BuildConfig.DEBUG)
+        {
+            Logger.Log(TAG,"OIS is supported : "+OIS);
+        }
             return OIS;
     }
 
-    private void ApplyContrastFilter()
+    public void ApplyContrastFilter(float R , float G, float B)
     {
-        if(ImageCaptureBuilder == null || PreviewRequestBuilder == null)
+        if(ImageCaptureBuilder == null || PreviewRequestBuilder == null) {
+            Logger.Log(TAG,"ImageCaptureBuilder is null or PreviewRequestBuilder is null , returning...");
             return;
-        String temp = PreferenceManager.getDefaultSharedPreferences(context).getString(Keys.contrastLevelKey,"1");
-        float offset = 0.0f;
-        try {
-            offset = Float.parseFloat(temp == null ? "1" : temp) / 2;
-            offset = offset < 20 ? offset : 5;
         }
-        catch(NumberFormatException e){
+        float offset;
+        CameraCharacteristics cameraCharacteristics = null;
+        try {
+            cameraCharacteristics = cameraManager.getCameraCharacteristics(CurrentCamera);
+        }catch (Exception e)
+        {
             if(BuildConfig.DEBUG)
                 Logger.Log(TAG,e.getMessage());
         }
-
-        TonemapCurve tonemapCurve = ImageCaptureBuilder.get(CaptureRequest.TONEMAP_CURVE);
+        if(cameraCharacteristics == null)
+        {
+            if(BuildConfig.DEBUG)
+                Logger.Log(TAG,"cameraCharacteristics is  null, returning from API ApplyContrastFilter()");
+            return;
+        }
+        TonemapCurve tonemapCurve = PreviewRequestBuilder.get(CaptureRequest.TONEMAP_CURVE);
         if(tonemapCurve!=null)
         {
             float[][] channels = new float[3][];
             for(int channel = TonemapCurve.CHANNEL_RED; channel <= TonemapCurve.CHANNEL_BLUE;channel++)
             {
                 float array[] = new float[tonemapCurve.getPointCount(channel)*2];
-                for(int i = 0 ; i < array.length ; i++)
-                    array[i] *= offset;
-                channels[channel] = array;
+                switch (channel)
+                {
+                    case TonemapCurve.CHANNEL_RED:
+                        offset = R;
+                        break;
+                    case TonemapCurve.CHANNEL_GREEN:
+                        offset = G;
+                        break;
+                    case TonemapCurve.CHANNEL_BLUE:
+                        offset = B;
+                        break;
+                    default:
+                        offset = 0;
+                }
+//                for(int i = 0 ; i < array.length ; i++)
+//                    array[i] = 1*offset;
+               channels[channel] = array;
+
+                tonemapCurve.copyColorCurve(channel,array,(int)offset);
+            }
+            if(BuildConfig.DEBUG)
+            {
+                Logger.Log(TAG,"RGB Values applied by camera are : ["+R+"] ["+G+"] ["+B+"]");
             }
             TonemapCurve tc = new TonemapCurve(channels[TonemapCurve.CHANNEL_RED],channels[TonemapCurve.CHANNEL_GREEN],channels[TonemapCurve.CHANNEL_BLUE]);
             ImageCaptureBuilder.set(CaptureRequest.TONEMAP_MODE,CaptureRequest.TONEMAP_MODE_CONTRAST_CURVE);
             ImageCaptureBuilder.set(CaptureRequest.TONEMAP_CURVE,tc);
             PreviewRequestBuilder.set(CaptureRequest.TONEMAP_MODE,CaptureRequest.TONEMAP_MODE_CONTRAST_CURVE);
             PreviewRequestBuilder.set(CaptureRequest.TONEMAP_CURVE,tc);
+            ImageCaptureBuilder.build();
+            ResumePreview();
+        }
+        else
+        {
+            Logger.Log(TAG,"ToneMap curve is null , not applying RGB curves");
         }
     }
 
-    private void ApplyHighQualityFilter()
+    public void ApplyHighQualityFilter()
     {
-        if(ImageCaptureBuilder == null || PreviewRequestBuilder == null)
+        if(ImageCaptureBuilder == null || PreviewRequestBuilder == null) {
+            Logger.Log(TAG,"Image Builder is null or Preview Builder is null , not applying high quality filter");
             return;
+        }
         ImageCaptureBuilder.set(CaptureRequest.TONEMAP_MODE,CaptureRequest.TONEMAP_MODE_HIGH_QUALITY);
         PreviewRequestBuilder.set(CaptureRequest.TONEMAP_MODE,CaptureRequest.TONEMAP_MODE_HIGH_QUALITY);
+        ImageCaptureBuilder.build();
+        ResumePreview();
     }
 
-    private void ProcessCameraoutputSizes()
+    private void ProcessCameraOutputSizes()
     {
         if(BuildConfig.DEBUG)
         {
@@ -510,10 +571,11 @@ public class Camera {
         }
     }
 
-    public static @Nullable Size[] getCameraresolutions()
+    public static @Nullable Size[] getCameraResolutions()
     {
         return Resolutions;
     }
+
 
 
 }

@@ -26,8 +26,11 @@ import android.view.SurfaceHolder;
 import android.view.SurfaceView;
 import android.view.View;
 import android.view.ViewConfiguration;
+import android.widget.Button;
 import android.widget.FrameLayout;
 import android.widget.ImageButton;
+import android.widget.RelativeLayout;
+import android.widget.SeekBar;
 
 import com.camera.zshot.zshot.BuildConfig;
 import com.camera.zshot.zshot.CameraLogger;
@@ -71,9 +74,14 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         private SharedPreferences.Editor editor;
         private static CameraLogger logger;
         private final String TAG = "MainActivity";
+        private boolean showMenu = true;
+        private float Red = 0.0f;
+        private float G = 0.0f;
+        private float B = 0.0f;
 
         //UI variable
-        ImageButton ShutterButton , FlashButton , HDR_Button , SettingButton;
+        ImageButton ShutterButton , FlashButton , HDR_Button , SettingButton ;
+        Button curveButton;
 
 
         @Override
@@ -83,6 +91,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         logger = new CameraLogger();
         StartApplication();
         }
+
         @Override
         protected void onResume() {
             super.onResume();
@@ -116,7 +125,8 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
                     ControlFlash();
                 }
             });
-
+            if(sensorManager!=null)
+             sensorManager.unregisterListener(this);
             if(logger!=null)
                 logger.Close();
     }
@@ -145,7 +155,6 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         customView = new CustomView(this);
         drawingSurface.addView(customView);
         SetupSurfaceView();
-        //previewSurface1.addView(SetupSurfaceView(previewSurface1.getWidth(),previewSurface1.getHeight()));
 
         Camera.setOnFocusListener(new OnCameraFocusListener() {
             @Override
@@ -175,7 +184,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
                         public boolean onTouch(View v, MotionEvent event) {
                             X = event.getX();
                             Y = event.getY();
-                            camera.FocusOnTap(X,Y);
+                            camera.FocusOnTap(X,Y,v.getWidth(),v.getHeight());
                             if(BuildConfig.DEBUG)
                                 logger.Log(TAG,"X = "+X+"Y = "+Y);
                             return false;
@@ -206,10 +215,13 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         }
 
         SettingButton = findViewById(R.id.Settings);
+        curveButton = findViewById(R.id.curveButton);
 
         FlashButton.setOnClickListener(this);
         HDR_Button.setOnClickListener(this);
         SettingButton.setOnClickListener(this);
+        curveButton.setOnClickListener(this);
+
     }
     private void SetupSurfaceView()
     {
@@ -222,7 +234,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
                 IS_PREVIEW_SURFACE_AVAILABLE = true;
                 CameraPreviewSurface = holder.getSurface();
                 DetectCameras();
-                if(!CheckSelfPermission(CAMERA_PERMISSION))
+                if(!hasPermission(CAMERA_PERMISSION))
                     RequestPermission(CAMERA_PERMISSION);
                 else{
                     if(OpenedCamera != null) {
@@ -242,44 +254,6 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
                 IS_PREVIEW_SURFACE_AVAILABLE = false;
             }
         });
-    }
-
-    @Deprecated
-    private SurfaceView SetupSurfaceView(int width,int height)
-    {
-        SurfaceView surfaceView = new SurfaceView(this);
-        SurfaceHolder surfaceHolder = surfaceView.getHolder();
-        surfaceHolder.setFixedSize(width,height);
-        surfaceHolder.setKeepScreenOn(true);
-        final SurfaceHolder.Callback callback = new SurfaceHolder.Callback() {
-            @Override
-            public void surfaceCreated(SurfaceHolder holder) {
-                IS_PREVIEW_SURFACE_AVAILABLE = true;
-                CameraPreviewSurface = holder.getSurface();
-                DetectCameras();
-                if(CheckSelfPermission(CAMERA_PERMISSION))
-                    RequestPermission(CAMERA_PERMISSION);
-                else{
-                    if(OpenedCamera != null) {
-                        camera = new Camera(MainActivity.this, CameraPreviewSurface);
-                        camera.OpenCamera(OpenedCamera);
-                    }
-                }
-
-            }
-
-            @Override
-            public void surfaceChanged(SurfaceHolder holder, int format, int width, int height) {
-
-            }
-
-            @Override
-            public void surfaceDestroyed(SurfaceHolder holder) {
-                IS_PREVIEW_SURFACE_AVAILABLE =false;
-            }
-        };
-        surfaceHolder.addCallback(callback);
-        return surfaceView;
     }
 
     private void DetectCameras() {
@@ -303,7 +277,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
     }
 
 
-    public boolean CheckSelfPermission(int REQUEST_CODE)
+    public boolean hasPermission(int REQUEST_CODE)
     {
         switch (REQUEST_CODE)
         {
@@ -313,12 +287,12 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
                 return ContextCompat.checkSelfPermission(this, Manifest.permission.READ_EXTERNAL_STORAGE) == PackageManager.PERMISSION_GRANTED
                         && ContextCompat.checkSelfPermission(this, Manifest.permission.WRITE_EXTERNAL_STORAGE) == PackageManager.PERMISSION_GRANTED;
             case LOCATION_PERMISSION:
-                return ContextCompat.checkSelfPermission(this,Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED
-                        && ContextCompat.checkSelfPermission(this,Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED;
+                return ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED
+                        && ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED;
             case VIBRATOR_PERMISSION:
-                return ContextCompat.checkSelfPermission(this,Manifest.permission.VIBRATE) == PackageManager.PERMISSION_GRANTED;
+                return ContextCompat.checkSelfPermission(this, Manifest.permission.VIBRATE) == PackageManager.PERMISSION_GRANTED;
             default:
-                return true;
+                return false;
 
         }
     }
@@ -393,7 +367,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
 
 
     public void TakePicture(View view) {
-        if(!CheckSelfPermission(STORAGE_PERMISSION))
+        if(!hasPermission(STORAGE_PERMISSION))
             RequestPermission(STORAGE_PERMISSION);
         else{
             ORIENTATION = rotation;
@@ -447,6 +421,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
     {
         FlashButton.setRotation(Degree);
         HDR_Button.setRotation(Degree);
+        curveButton.setRotation(Degree);
     }
 
 
@@ -542,7 +517,68 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
                 case R.id.Settings:
                     startActivity(new Intent(this,AppSettings.class));
                     break;
+                case R.id.curveButton:
+                    showCurveMenu();
+                    break;
+                 default:
+                     logger.Log(TAG,"Unknown click was found from UI : "+view.toString());
+
             }
 
     }
+
+    private void showCurveMenu()
+    {
+        RelativeLayout CurveMenuLayout = findViewById(R.id.CurveLayout);
+
+        CurveMenuLayout.setVisibility(showMenu ? View.VISIBLE : View.GONE);
+        showMenu  = !showMenu;
+
+        final SeekBar RedSeekBar = findViewById(R.id.RedCurveBar);
+        SeekBar GreenSeekBar = findViewById(R.id.GreenCurveBar);
+        SeekBar BlueSeekBar = findViewById(R.id.BlueCurveBar);
+
+        SeekBar.OnSeekBarChangeListener seekBarChangeListener = new SeekBar.OnSeekBarChangeListener() {
+            @Override
+            public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
+
+            }
+
+            @Override
+            public void onStartTrackingTouch(SeekBar seekBar) {
+
+            }
+
+            @Override
+            public void onStopTrackingTouch(SeekBar seekBar) {
+
+                switch (seekBar.getId())
+                {
+                    case R.id.RedCurveBar:
+                        Red = seekBar.getProgress()/10.0f;
+                        break;
+                    case R.id.GreenCurveBar:
+                        G = seekBar.getProgress()/10.0f;
+                        break;
+                    case R.id.BlueCurveBar:
+                        B = seekBar.getProgress()/10.0f;
+                        break;
+                }
+                if(camera != null) {
+                    camera.ApplyContrastFilter(Red, G, B);
+                    logger.Log(TAG,"RGB values applied are : "+Red+" "+G+" "+B);
+
+                }else
+                {
+                    logger.Log(TAG,"Camera is null , not applying RGB curves");
+                }
+            }
+        };
+
+        RedSeekBar.setOnSeekBarChangeListener(seekBarChangeListener);
+        GreenSeekBar.setOnSeekBarChangeListener(seekBarChangeListener);
+        BlueSeekBar.setOnSeekBarChangeListener(seekBarChangeListener);
+
+    }
+
 }
