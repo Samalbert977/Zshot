@@ -33,6 +33,8 @@ import com.camera.zshot.zshot.keys.Keys;
 import com.camera.zshot.zshot.ui.MainActivity;
 
 import java.io.File;
+import java.math.RoundingMode;
+import java.text.DecimalFormat;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.Comparator;
@@ -569,7 +571,12 @@ public class Camera {
             assert map!=null;
             Resolutions = map.getOutputSizes(ImageFormat.JPEG);
             if(BuildConfig.DEBUG) {
-                Logger.Log(TAG,Arrays.toString(Resolutions));
+                DecimalFormat decimalFormat = new DecimalFormat("0.00");
+                decimalFormat.setRoundingMode(RoundingMode.DOWN);
+                for(Size size : Resolutions) {
+                    double result = (double)size.getWidth() / (double) size.getHeight();
+                    Logger.Log(TAG, "Resolution is : [" + size.getWidth() + "x" + size.getHeight() + "] " + decimalFormat.format(result) + "\n");
+                }
             }
             } catch (CameraAccessException e) {
             e.printStackTrace();

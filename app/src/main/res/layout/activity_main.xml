@@ -13,9 +13,9 @@
         android:id="@+id/DrawingSurface"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        android:layout_alignParentTop="true"
-        android:layout_toStartOf="@+id/Panel1"
-        android:layout_toEndOf="@+id/Panel2"
+        android:layout_centerInParent="true"
+        android:layout_below="@+id/Panel2"
+        android:layout_above="@+id/Panel1"
         android:visibility="visible">
 
     </FrameLayout>
@@ -24,17 +24,18 @@
         android:id="@+id/Preview"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        android:layout_toStartOf="@+id/Panel1"
-        android:layout_toEndOf="@+id/Panel2"
-        android:visibility="visible" >
-    </TextureView>
+        android:visibility="visible"
+        android:layout_centerInParent="true"
+        android:layout_below="@+id/Panel2"
+        android:layout_above="@+id/Panel1"/>
 
     <RelativeLayout
         android:id="@+id/CurveLayout"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_alignStart="@+id/DrawingSurface"
-        android:visibility="gone">
+        android:visibility="visible"
+        android:layout_below="@id/Panel2"
+        android:layout_margin="10sp">
 
         <SeekBar
             android:id="@+id/RedCurveBar"
@@ -72,11 +73,11 @@
 
     <RelativeLayout
         android:id="@+id/Panel1"
-        android:layout_width="wrap_content"
-        android:layout_height="match_parent"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
         android:visibility="visible"
         android:layout_alignParentEnd="true"
-        android:layout_alignParentTop="true"
+        android:layout_alignParentBottom="true"
         android:background="@android:drawable/screen_background_dark_transparent">
 
         <ImageButton
@@ -93,8 +94,8 @@
 
     <RelativeLayout
         android:id="@+id/Panel2"
-        android:layout_width="84sp"
-        android:layout_height="match_parent"
+        android:layout_width="match_parent"
+        android:layout_height="84sp"
         android:layout_alignParentStart="true"
         android:layout_alignParentTop="true"
         android:background="@android:drawable/screen_background_dark_transparent">
@@ -106,8 +107,8 @@
             app:srcCompat="@drawable/ic_flash_auto_black_24dp"
             android:background="@android:color/transparent"
             android:layout_centerInParent="true"
-            android:layout_alignParentTop="true"
-            android:layout_marginTop="10sp"
+            android:layout_alignParentStart="true"
+            android:layout_marginStart="10sp"
             android:contentDescription="@string/Flash_Description" />
 
         <ImageButton
@@ -116,9 +117,9 @@
             android:id="@+id/HDR_Button"
             android:src="@drawable/ic_hdr_off_black_24dp"
             android:layout_centerInParent="true"
-            android:layout_below="@+id/FlashButton"
+            android:layout_toEndOf="@id/FlashButton"
             android:background="@android:color/transparent"
-            android:layout_marginTop="20sp"
+            android:layout_marginStart="10sp"
             android:contentDescription="@string/Hdr_description"/>
 
         <ImageButton
@@ -127,9 +128,9 @@
             android:id="@+id/Settings"
             android:src="@drawable/ic_settings_white_24dp"
             android:background="@android:color/transparent"
-            android:layout_alignParentBottom="true"
             android:layout_centerInParent="true"
-            android:layout_marginBottom="15sp"
+            android:layout_alignParentEnd="true"
+            android:layout_marginEnd="10sp"
             android:contentDescription="@string/SettingIconDescription"/>
 
         <Button
@@ -137,9 +138,10 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="@string/curveTitle"
-            android:layout_below="@+id/HDR_Button"
+            android:layout_toEndOf="@id/HDR_Button"
             android:background="@android:color/transparent"
-            android:layout_marginTop="10dp"/>
+            android:layout_marginStart="10sp"
+            android:layout_centerInParent="true"/>
 
     </RelativeLayout>
 

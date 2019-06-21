@@ -6,6 +6,7 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
+import android.graphics.Color;
 import android.graphics.SurfaceTexture;
 import android.hardware.Sensor;
 import android.hardware.SensorEvent;
@@ -230,6 +231,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
     {
         textureView = findViewById(R.id.Preview);
         textureView.setKeepScreenOn(true);
+        textureView.setAlpha(1.0f);
 
         textureView.setSurfaceTextureListener(new TextureView.SurfaceTextureListener() {
             @Override
@@ -414,15 +416,18 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         float Degree;
         switch (rotation) {
             case 0:
-                Degree = 270.0f;
+               // Degree = 270.0f;
+                Degree = 0.0f;
                 Rotate_UI_By(Degree);
                 break;
             case 3:
-                Degree = 180.0f;
+                //Degree = 180.0f;
+                Degree = 270.0f;
                 Rotate_UI_By(Degree);
                 break;
             case 1:
-                Degree = 0.0f;
+               // Degree = 0.0f;
+                Degree = 180.0f;
                 Rotate_UI_By(Degree);
                 break;
         }
