@@ -9,14 +9,6 @@
     android:background="@android:drawable/screen_background_dark"
     android:visibility="visible">
 
-    <SurfaceView
-        android:id="@+id/Preview"
-        android:layout_width="match_parent"
-        android:layout_height="match_parent"
-        android:layout_toStartOf="@+id/Panel1"
-        android:layout_toEndOf="@+id/Panel2"
-        android:visibility="visible" />
-
     <FrameLayout
         android:id="@+id/DrawingSurface"
         android:layout_width="match_parent"
@@ -27,6 +19,15 @@
         android:visibility="visible">
 
     </FrameLayout>
+
+    <TextureView
+        android:id="@+id/Preview"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:layout_toStartOf="@+id/Panel1"
+        android:layout_toEndOf="@+id/Panel2"
+        android:visibility="visible" >
+    </TextureView>
 
     <RelativeLayout
         android:id="@+id/CurveLayout"

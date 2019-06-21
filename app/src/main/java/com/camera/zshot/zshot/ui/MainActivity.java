@@ -6,6 +6,7 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
+import android.graphics.SurfaceTexture;
 import android.hardware.Sensor;
 import android.hardware.SensorEvent;
 import android.hardware.SensorEventListener;
@@ -24,6 +25,7 @@ import android.view.MotionEvent;
 import android.view.Surface;
 import android.view.SurfaceHolder;
 import android.view.SurfaceView;
+import android.view.TextureView;
 import android.view.View;
 import android.view.ViewConfiguration;
 import android.widget.Button;
@@ -78,6 +80,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         private float Red = 0.0f;
         private float G = 0.0f;
         private float B = 0.0f;
+        private TextureView textureView;
 
         //UI variable
         ImageButton ShutterButton , FlashButton , HDR_Button , SettingButton ;
@@ -100,7 +103,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
             else
                 HideNavigationAndActionBar();
             if(camera==null && IS_PREVIEW_SURFACE_AVAILABLE){
-                camera = new Camera(this,CameraPreviewSurface);
+                camera = new Camera(this,textureView);
                 camera.OpenCamera(OpenedCamera);}
                 if(sensorManager!=null && Accelerometer!=null)
                     sensorManager.registerListener(this,Accelerometer,SensorManager.SENSOR_DELAY_NORMAL);
@@ -225,33 +228,41 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
     }
     private void SetupSurfaceView()
     {
-        SurfaceView surfaceView = findViewById(R.id.Preview);
-        SurfaceHolder surfaceHolder = surfaceView.getHolder();
-        surfaceHolder.setKeepScreenOn(true);
-        surfaceHolder.addCallback(new SurfaceHolder.Callback() {
+        textureView = findViewById(R.id.Preview);
+        textureView.setKeepScreenOn(true);
+
+        textureView.setSurfaceTextureListener(new TextureView.SurfaceTextureListener() {
             @Override
-            public void surfaceCreated(SurfaceHolder holder) {
-                IS_PREVIEW_SURFACE_AVAILABLE = true;
-                CameraPreviewSurface = holder.getSurface();
-                DetectCameras();
-                if(!hasPermission(CAMERA_PERMISSION))
-                    RequestPermission(CAMERA_PERMISSION);
-                else{
-                    if(OpenedCamera != null) {
-                        camera = new Camera(MainActivity.this, CameraPreviewSurface);
-                        camera.OpenCamera(OpenedCamera);
+            public void onSurfaceTextureAvailable(SurfaceTexture surface, int width, int height) {
+                {
+                    IS_PREVIEW_SURFACE_AVAILABLE = true;
+                    DetectCameras();
+                    if(!hasPermission(CAMERA_PERMISSION))
+                        RequestPermission(CAMERA_PERMISSION);
+                    else{
+                        if(OpenedCamera != null) {
+                            camera = new Camera(MainActivity.this, textureView);
+                            camera.OpenCamera(OpenedCamera);
+                        }
                     }
                 }
-            }
-
-            @Override
-            public void surfaceChanged(SurfaceHolder holder, int format, int width, int height) {
 
             }
 
             @Override
-            public void surfaceDestroyed(SurfaceHolder holder) {
+            public void onSurfaceTextureSizeChanged(SurfaceTexture surface, int width, int height) {
+
+            }
+
+            @Override
+            public boolean onSurfaceTextureDestroyed(SurfaceTexture surface) {
                 IS_PREVIEW_SURFACE_AVAILABLE = false;
+                return false;
+            }
+
+            @Override
+            public void onSurfaceTextureUpdated(SurfaceTexture surface) {
+
             }
         });
     }

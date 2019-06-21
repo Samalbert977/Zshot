@@ -3,6 +3,7 @@ package com.camera.zshot.zshot.camera;
 import android.content.Context;
 import android.graphics.ImageFormat;
 import android.graphics.Rect;
+import android.graphics.SurfaceTexture;
 import android.hardware.camera2.CameraAccessException;
 import android.hardware.camera2.CameraCaptureSession;
 import android.hardware.camera2.CameraCharacteristics;
@@ -22,6 +23,7 @@ import android.os.HandlerThread;
 import android.preference.PreferenceManager;
 import android.util.Size;
 import android.view.Surface;
+import android.view.TextureView;
 import android.widget.Toast;
 
 import com.camera.zshot.zshot.BuildConfig;
@@ -53,6 +55,8 @@ public class Camera {
     private int FocusState;
     private Context context ;
     private Surface PreviewSurface;
+    private SurfaceTexture surfaceTexture;
+    private TextureView textureView;
     private CameraManager cameraManager = null;
     private CameraDevice cameraDevice = null;
     private CameraDevice.StateCallback stateCallback = null;
@@ -72,10 +76,10 @@ public class Camera {
     private final String TAG = "Camera.java";
 
 
-    public Camera(Context context,Surface surface)
+    public Camera(Context context,TextureView textureView)
     {
         this.context = context;
-        this.PreviewSurface = surface;
+        this.textureView = textureView;
         Logger = MainActivity.getLoggerInstance();
         OnCreate();
     }
@@ -265,7 +269,7 @@ public class Camera {
             imageReader.setOnImageAvailableListener(onImageAvailableListener,null);
             PreviewRequestBuilder = cameraDevice.createCaptureRequest(CameraDevice.TEMPLATE_PREVIEW);
             ImageCaptureBuilder = cameraDevice.createCaptureRequest(CameraDevice.TEMPLATE_STILL_CAPTURE);
-            PreviewRequestBuilder.addTarget(PreviewSurface);
+            PreviewRequestBuilder.addTarget(getCameraOutputSurface());
             ImageCaptureBuilder.addTarget(imageReader.getSurface());
             if(isOISSupported())
                 ImageCaptureBuilder.set(CaptureRequest.LENS_OPTICAL_STABILIZATION_MODE, CaptureRequest.LENS_OPTICAL_STABILIZATION_MODE_ON);
@@ -420,6 +424,7 @@ public class Camera {
         try {
             CameraCharacteristics cameraCharacteristics = cameraManager.getCameraCharacteristics(CurrentCamera);
             final Rect sensorArraySize = cameraCharacteristics.get(CameraCharacteristics.SENSOR_INFO_ACTIVE_ARRAY_SIZE);
+            assert sensorArraySize != null;
             y = (int)((x / (float)width)  * (float)sensorArraySize.height());
             x = (int)((y / (float)height) * (float)sensorArraySize.width());
 
@@ -575,6 +580,16 @@ public class Camera {
     {
         return Resolutions;
     }
+
+    private Surface getCameraOutputSurface()
+    {
+        surfaceTexture = textureView.getSurfaceTexture();
+        surfaceTexture.setDefaultBufferSize(CurrentResolution.getWidth(),CurrentResolution.getHeight());
+        PreviewSurface = new Surface(surfaceTexture);
+
+        return  PreviewSurface;
+    }
+
 
 
 
